@@ -2,7 +2,11 @@
 <html lang="zh-Hant">
 <head>
 <meta charset="utf-8">
-<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover">
+<meta name="viewport" content="width=device-width, initial-scale=1, minimum-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="theme-color" content="#060c17">
 <title>細菌獵殺者 Germ Hunter</title>
 <style>
 :root{
@@ -116,7 +120,7 @@ html,body{
   <div id="stats"><span id="waveT">第 1 波</span><span id="scoreT">分數 0</span></div>
   <canvas id="radar" width="192" height="192"></canvas>
 </div>
-<div id="topr"><button class="sm" id="bPause" aria-label="暫停">⏸</button><button class="sm" id="bSnd" aria-label="音效">🔊</button></div>
+<div id="topr"><button class="sm" id="bFull" aria-label="全螢幕">⛶</button><button class="sm" id="bPause" aria-label="暫停">⏸</button><button class="sm" id="bSnd" aria-label="音效">🔊</button></div>
 <div id="wchip"></div>
 <div id="banner"><b></b><span></span></div>
 
@@ -813,6 +817,36 @@ $('#bResume').addEventListener('click',togglePause);
 $('#bPause').addEventListener('click',togglePause);
 $('#bSnd').addEventListener('click',function(){muted=!muted;this.textContent=muted?'🔇':'🔊'});
 document.addEventListener('visibilitychange',function(){if(document.hidden&&state==='playing')togglePause()});
+
+/* ---------------- anti-zoom / viewport guard ---------------- */
+var vpMeta=document.querySelector('meta[name=viewport]'),VP='width=device-width, initial-scale=1, minimum-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover';
+function resetZoom(){
+  vpMeta.setAttribute('content','width=device-width, initial-scale=1, viewport-fit=cover');
+  setTimeout(function(){vpMeta.setAttribute('content',VP);resize()},60);
+}
+['gesturestart','gesturechange','gestureend'].forEach(function(n){document.addEventListener(n,function(e){e.preventDefault()})});
+document.addEventListener('touchmove',function(e){if(e.target.closest&&e.target.closest('.card'))return;e.preventDefault()},{passive:false});
+var lastTE=0;
+document.addEventListener('touchend',function(e){
+  var t=Date.now();
+  if(t-lastTE<350&&!(e.target.closest&&e.target.closest('.ov'))&&e.target.tagName!=='INPUT')e.preventDefault();
+  lastTE=t;
+  if(e.touches.length===0)resetInput();
+},{passive:false});
+document.addEventListener('touchcancel',function(){resetInput()});
+window.addEventListener('blur',resetInput);
+if(window.visualViewport){
+  var vv=window.visualViewport;
+  vv.addEventListener('resize',function(){resize();if(vv.scale>1.02)resetZoom()});
+}
+$('#bFull').addEventListener('click',function(){
+  resetZoom();
+  var el=document.documentElement,rq=el.requestFullscreen||el.webkitRequestFullscreen;
+  try{
+    if(document.fullscreenElement||document.webkitFullscreenElement){(document.exitFullscreen||document.webkitExitFullscreen).call(document)}
+    else if(rq){var p=rq.call(el);if(p&&p.catch)p.catch(function(){})}
+  }catch(err){}
+});
 
 /* ---------------- share / QR ---------------- */
 var shareUrl=$('#shareUrl'),qrMsg=$('#qrMsg');
